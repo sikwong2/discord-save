@@ -74,11 +74,7 @@ client.on(Events.MessageCreate, async message => {
 
   const ref_msg_id = message.reference?.messageId;
   const channel = message.channel;
-  const ref_msg = await channel.messages.fetch(ref_msg_id);
-  const ref_msg_content = ref_msg.content;
-  // const test = await rest.get(`/channels/${message.channelId}/messages/${message.id}`);
-  // console.log(test);
-  // await message.forward(channel);
+
   if (message.reference && message.mentions.users.has(client.user?.id)) {
     db[message.author.id].message_refs.push([channel.id, ref_msg_id]);
     await save_db('./db.json', db);
