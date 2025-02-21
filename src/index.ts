@@ -1,9 +1,16 @@
-import { Client, Events, GatewayIntentBits, REST, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { Client, Events, GatewayIntentBits, REST, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType } from 'discord.js';
 import { load_db, save_db } from './db';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 var db = await load_db('./db.json');
 const rest = new REST({ version: '10' }).setToken(`${Bun.env.DISCORD_TOKEN}`);
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 
 client.on(Events.ClientReady, readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}`)
@@ -64,23 +71,67 @@ ${attachments ? attachments.join(' ') : ''}
   }
 
   if (interaction.commandName === 'blackjack') {
-    const hit = new ButtonBuilder()
-      .setStyle(ButtonStyle.Success)
-      .setLabel('Hit')
-      .setCustomId('hit');
+    const buttons = [
+      {
+        name: 'Hit',
+        style: ButtonStyle.Success,
+        disabled: false
+      },
+      {
+        name: 'Stand',
+        style: ButtonStyle.Danger,
+        disabled: false,
+      },
+      {
+        name: 'Split',
+        style: ButtonStyle.Primary,
+        disabled: true
+      }
 
-    const stand = new ButtonBuilder()
-      .setStyle(ButtonStyle.Danger)
-      .setLabel('Stand')
-      .setCustomId('stand')
+    ]
+    const button_components = buttons.map((x) => {
+      return new ButtonBuilder()
+        .setLabel(x.name)
+        .setDisabled(x.disabled)
+        .setCustomId(x.name)
+        .setStyle(x.style)
+    });
 
     const row = new ActionRowBuilder()
-      .addComponents(hit, stand)
+      .addComponents(button_components);
 
-    const collectorFilter = m => m.content.includes('stand');
-    const collector = interaction.channel?.createMessageComponentCollector({ filter: collectorFilter, time: 16_000 });
+    const cards = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A'];
 
-    await interaction.reply({ content: 'test', components: [row] });
+    const embed = new EmbedBuilder()
+      .setTitle('GOLD GOLD GOLD')
+      .setDescription('gamba')
+      .setColor('Random')
+      .addFields([
+        {
+          name: 'Dealers Hand',
+          value: `${cards[getRandomInt(0, 12)]}\t█`,
+        },
+        {
+          name: 'Your Hand',
+          value: `${cards[getRandomInt(0, 12)]} ${cards[getRandomInt(0, 12)]}`
+        }
+      ]);
+
+    const filter = i => i.user.id === interaction.user.id;
+
+
+    const reply = await interaction.reply({ components: [row], embeds: [embed] });
+    const collector = reply.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      filter
+    });
+
+    collector.on('collect', interaction => {
+      if (interaction.customId === 'Hit') {
+        console.log(embed.data);
+        interaction.reply('Hit');
+      }
+    });
   }
 
 })
