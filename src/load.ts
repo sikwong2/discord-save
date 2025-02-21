@@ -17,6 +17,10 @@ const commands = [
     name: 'reset',
     description: 'Reset the database'
   },
+  {
+    name: 'blackjack',
+    description: 'GOLD GOLD GOLD'
+  },
 ];
 
 const rest = new REST({ version: '10' }).setToken(`${Bun.env.DISCORD_TOKEN}`);

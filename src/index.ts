@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits, REST } from 'discord.js';
+import { Client, Events, GatewayIntentBits, REST, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { load_db, save_db } from './db';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
@@ -63,7 +63,25 @@ ${attachments ? attachments.join(' ') : ''}
     await interaction.reply('Database reset');
   }
 
+  if (interaction.commandName === 'blackjack') {
+    const hit = new ButtonBuilder()
+      .setStyle(ButtonStyle.Success)
+      .setLabel('Hit')
+      .setCustomId('hit');
 
+    const stand = new ButtonBuilder()
+      .setStyle(ButtonStyle.Danger)
+      .setLabel('Stand')
+      .setCustomId('stand')
+
+    const row = new ActionRowBuilder()
+      .addComponents(hit, stand)
+
+    const collectorFilter = m => m.content.includes('stand');
+    const collector = interaction.channel?.createMessageComponentCollector({ filter: collectorFilter, time: 16_000 });
+
+    await interaction.reply({ content: 'test', components: [row] });
+  }
 
 })
 
