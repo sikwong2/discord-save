@@ -2,8 +2,27 @@ import { Client, Events, GatewayIntentBits, REST, ActionRowBuilder, ButtonBuilde
 import { load_db, save_db } from './db';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-var db = await load_db('./db.json');
+let db = await load_db('./db.json');
+
 const rest = new REST({ version: '10' }).setToken(`${Bun.env.DISCORD_TOKEN}`);
+const win_img = 'https://media.discordapp.net/attachments/1141259150005899329/1342670558722134057/miku_retard.png?ex=67ba7ae6&is=67b92966&hm=1ec32dc3e58725fc6f891d21d891e40f824661ac69a3675ad59ecad60ef11a41&=&format=webp&quality=lossless&width=326&height=282';
+const lose_img = 'https://media.discordapp.net/attachments/1091699978088484905/1342671510623485992/Miku_08_st.ayaka.one.png?ex=67ba7bc9&is=67b92a49&hm=28e72a30525cbb0766f163461a5f87380324cc354e15964e184481d6766ab95c&=&format=webp&quality=lossless&width=326&height=282';
+
+const ranks = {
+  '2': 2,
+  '3': 3,
+  '4': 4,
+  '5': 5,
+  '6': 6,
+  '7': 7,
+  '8': 8,
+  '9': 9,
+  '10': 10,
+  'J': 10,
+  'Q': 10,
+  'K': 10,
+  'A': 11
+};
 
 function getRandomInt(min, max) {
   min = Math.ceil(min);
@@ -11,6 +30,19 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function get_score(hand): number {
+  let score = 0;
+  hand?.forEach((x) => {
+    score += ranks[x];
+  });
+
+  hand?.forEach((x) => {
+    if (x == 'A' && score > 21) {
+      score -= 10;
+    }
+  })
+  return score;
+}
 
 client.on(Events.ClientReady, readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}`)
@@ -102,14 +134,15 @@ ${attachments ? attachments.join(' ') : ''}
 
     const cards = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A'];
 
-    const embed = new EmbedBuilder()
+
+    let embed = new EmbedBuilder()
       .setTitle('GOLD GOLD GOLD')
       .setDescription('gamba')
       .setColor('Random')
       .addFields([
         {
           name: 'Dealers Hand',
-          value: `${cards[getRandomInt(0, 12)]}\t█`,
+          value: `${cards[getRandomInt(0, 12)]}`,
         },
         {
           name: 'Your Hand',
@@ -117,8 +150,18 @@ ${attachments ? attachments.join(' ') : ''}
         }
       ]);
 
+
     const filter = i => i.user.id === interaction.user.id;
 
+
+    /* check if dealt hand is a winning or losing before hitting */
+    const hand = embed.data.fields?.[1].value.split(' ');
+    const score = get_score(hand);
+
+    if (score == 21) {
+      embed.setImage(win_img)
+      button_components.forEach((x) => x.setDisabled(true));
+    }
 
     const reply = await interaction.reply({ components: [row], embeds: [embed] });
     const collector = reply.createMessageComponentCollector({
@@ -128,9 +171,66 @@ ${attachments ? attachments.join(' ') : ''}
 
     collector.on('collect', interaction => {
       if (interaction.customId === 'Hit') {
-        console.log(embed.data);
-        interaction.reply('Hit');
+        let new_embed = new EmbedBuilder(embed.data);
+        new_embed.setFields([
+          embed.data.fields?.[0],
+          {
+            name: 'Your Hand',
+            value: embed.data.fields?.[1].value + ` ${cards[getRandomInt(0, 12)]}`
+          }
+        ])
+
+        const hand = new_embed.data.fields?.[1].value.split(' ');
+        const score = get_score(hand);
+
+        if (score > 21) {
+          new_embed.setImage(lose_img)
+          button_components.forEach((x) => x.setDisabled(true));
+        } else if (score == 21) {
+          new_embed.setImage(win_img);
+          button_components.forEach((x) => x.setDisabled(true));
+        }
+
+        embed = new_embed;
       }
+
+      if (interaction.customId === 'Stand') {
+        const dealer_hand = embed.data.fields?.[0].value.split(' ');
+        dealer_hand.push(cards[getRandomInt(0, 12)]);
+
+        let score = get_score(dealer_hand);
+
+        while (score < 17) {
+          dealer_hand.push(cards[getRandomInt(0, 12)]);
+          score = get_score(dealer_hand);
+        }
+
+        const player_hand = embed.data.fields?.[1].value.split(' ');
+        const player_score = get_score(player_hand);
+        let win = score > 21;
+
+        if (player_score < score || score == 21) {
+          win = false;
+        }
+        /* check if winning hand */
+
+        let new_embed = new EmbedBuilder(embed.data)
+          .setFields([
+            {
+              name: 'Dealers Hand',
+              value: dealer_hand?.join(' ')
+            },
+            embed.data.fields?.[1]
+          ]);
+        new_embed.setImage(win ? win_img : lose_img);
+        embed = new_embed;
+        button_components.forEach((x) => x.setDisabled(true));
+      }
+
+      reply.edit({ embeds: [embed], components: [row] });
+
+
+      interaction.deferUpdate();
     });
   }
 
