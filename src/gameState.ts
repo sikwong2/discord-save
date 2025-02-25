@@ -33,8 +33,8 @@ export class GameState {
     this.dealer_hand = [cards[getRandomInt(0, 12)]];
     this.hand_1 = [cards[getRandomInt(0, 12)], cards[getRandomInt(0, 12)]];
     this.hand_2 = [];
-    this.score = 0;
-    this.dealer_score = 0;
+    this.score = this.get_score(this.hand_1);
+    this.dealer_score = this.get_score(this.dealer_hand);
   }
 
   get_score(hand: string[]) {
@@ -55,9 +55,6 @@ export class GameState {
   hit() {
     this.hand_1.push(cards[getRandomInt(0, 12)]);
 
-    if (this.used_split) {
-      this.hand_2.push(cards[getRandomInt(0, 12)]);
-    }
     this.score = this.get_score(this.hand_1);
   }
 
