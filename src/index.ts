@@ -1,5 +1,6 @@
 import { Client, Events, GatewayIntentBits, REST, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType } from 'discord.js';
 import { load_db, save_db } from './db';
+import { GameState } from './gameState';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 let db = await load_db('./db.json');
@@ -7,42 +8,7 @@ let db = await load_db('./db.json');
 const rest = new REST({ version: '10' }).setToken(`${Bun.env.DISCORD_TOKEN}`);
 const win_img = 'https://media.discordapp.net/attachments/1141259150005899329/1342670558722134057/miku_retard.png?ex=67ba7ae6&is=67b92966&hm=1ec32dc3e58725fc6f891d21d891e40f824661ac69a3675ad59ecad60ef11a41&=&format=webp&quality=lossless&width=326&height=282';
 const lose_img = 'https://media.discordapp.net/attachments/1091699978088484905/1342671510623485992/Miku_08_st.ayaka.one.png?ex=67ba7bc9&is=67b92a49&hm=28e72a30525cbb0766f163461a5f87380324cc354e15964e184481d6766ab95c&=&format=webp&quality=lossless&width=326&height=282';
-
-const ranks = {
-  '2': 2,
-  '3': 3,
-  '4': 4,
-  '5': 5,
-  '6': 6,
-  '7': 7,
-  '8': 8,
-  '9': 9,
-  '10': 10,
-  'J': 10,
-  'Q': 10,
-  'K': 10,
-  'A': 11
-};
-
-function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function get_score(hand): number {
-  let score = 0;
-  hand?.forEach((x) => {
-    score += ranks[x];
-  });
-
-  hand?.forEach((x) => {
-    if (x == 'A' && score > 21) {
-      score -= 10;
-    }
-  })
-  return score;
-}
+const ohne_gif = 'https://media1.tenor.com/m/lb-o-EPqTrsAAAAC/ohnepixel-gold.gif'
 
 client.on(Events.ClientReady, readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}`)
@@ -132,21 +98,22 @@ ${attachments ? attachments.join(' ') : ''}
     const row = new ActionRowBuilder()
       .addComponents(button_components);
 
-    const cards = [2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A'];
 
+    let gameState = new GameState();
 
     let embed = new EmbedBuilder()
       .setTitle('GOLD GOLD GOLD')
-      .setDescription('gamba')
+      .setDescription('GOLD GOLD GOLD')
       .setColor('Random')
+      .setImage(ohne_gif)
       .addFields([
         {
           name: 'Dealers Hand',
-          value: `${cards[getRandomInt(0, 12)]}`,
+          value: `**${gameState.dealer_hand.join(' ')}**`,
         },
         {
           name: 'Your Hand',
-          value: `${cards[getRandomInt(0, 12)]} ${cards[getRandomInt(0, 12)]}`
+          value: `**${gameState.hand_1.join(' ')}**`
         }
       ]);
 
@@ -155,13 +122,12 @@ ${attachments ? attachments.join(' ') : ''}
 
 
     /* check if dealt hand is a winning or losing before hitting */
-    const hand = embed.data.fields?.[1].value.split(' ');
-    const score = get_score(hand);
-
-    if (score == 21) {
-      embed.setImage(win_img)
+    let player_score = gameState.get_score(gameState.hand_1);
+    if (player_score == 21) {
       button_components.forEach((x) => x.setDisabled(true));
+      embed.setImage(win_img);
     }
+
 
     const reply = await interaction.reply({ components: [row], embeds: [embed] });
     const collector = reply.createMessageComponentCollector({
@@ -170,63 +136,38 @@ ${attachments ? attachments.join(' ') : ''}
     });
 
     collector.on('collect', interaction => {
+      let stand = false;
       if (interaction.customId === 'Hit') {
-        let new_embed = new EmbedBuilder(embed.data);
-        new_embed.setFields([
-          embed.data.fields?.[0],
-          {
-            name: 'Your Hand',
-            value: embed.data.fields?.[1].value + ` ${cards[getRandomInt(0, 12)]}`
-          }
-        ])
-
-        const hand = new_embed.data.fields?.[1].value.split(' ');
-        const score = get_score(hand);
-
-        if (score > 21) {
-          new_embed.setImage(lose_img)
-          button_components.forEach((x) => x.setDisabled(true));
-        } else if (score == 21) {
-          new_embed.setImage(win_img);
-          button_components.forEach((x) => x.setDisabled(true));
-        }
-
-        embed = new_embed;
+        gameState.hit();
       }
 
       if (interaction.customId === 'Stand') {
-        const dealer_hand = embed.data.fields?.[0].value.split(' ');
-        dealer_hand.push(cards[getRandomInt(0, 12)]);
+        gameState.stand();
+        button_components.forEach((x) => x.setDisabled(true));
+        stand = true;
+      }
+      let new_embed = new EmbedBuilder(embed.data)
+        .setFields([
+          {
+            name: `Dealer's Hand`,
+            value: `**${gameState.dealer_hand.join(' ')}**`
+          },
+          {
+            name: "Your Hand",
+            value: `**${gameState.hand_1.join(' ')}**`
+          }
+        ]);
 
-        let score = get_score(dealer_hand);
-
-        while (score < 17) {
-          dealer_hand.push(cards[getRandomInt(0, 12)]);
-          score = get_score(dealer_hand);
-        }
-
-        const player_hand = embed.data.fields?.[1].value.split(' ');
-        const player_score = get_score(player_hand);
-        let win = score > 21;
-
-        if (player_score < score || score == 21) {
-          win = false;
-        }
-        /* check if winning hand */
-
-        let new_embed = new EmbedBuilder(embed.data)
-          .setFields([
-            {
-              name: 'Dealers Hand',
-              value: dealer_hand?.join(' ')
-            },
-            embed.data.fields?.[1]
-          ]);
-        new_embed.setImage(win ? win_img : lose_img);
-        embed = new_embed;
+      if (gameState.score > 21 || (stand && gameState.score < gameState.dealer_score && gameState.dealer_score <= 21)) {
+        new_embed.setImage(lose_img);
+        button_components.forEach((x) => x.setDisabled(true));
+      }
+      if (gameState.score == 21 || gameState.dealer_score > 21 || (stand && gameState.score > gameState.dealer_score && gameState.score <= 21)) {
+        new_embed.setImage(win_img);
         button_components.forEach((x) => x.setDisabled(true));
       }
 
+      embed = new_embed;
       reply.edit({ embeds: [embed], components: [row] });
 
 
