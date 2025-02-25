@@ -8,6 +8,7 @@ let db = await load_db('./db.json');
 const rest = new REST({ version: '10' }).setToken(`${Bun.env.DISCORD_TOKEN}`);
 const win_img = 'https://media.discordapp.net/attachments/1141259150005899329/1342670558722134057/miku_retard.png?ex=67ba7ae6&is=67b92966&hm=1ec32dc3e58725fc6f891d21d891e40f824661ac69a3675ad59ecad60ef11a41&=&format=webp&quality=lossless&width=326&height=282';
 const lose_img = 'https://media.discordapp.net/attachments/1091699978088484905/1342671510623485992/Miku_08_st.ayaka.one.png?ex=67ba7bc9&is=67b92a49&hm=28e72a30525cbb0766f163461a5f87380324cc354e15964e184481d6766ab95c&=&format=webp&quality=lossless&width=326&height=282';
+const tie_img = 'https://cdn.discordapp.com/attachments/1141259150005899329/1344084344649678860/Miku_06_st.ayaka.one.png?ex=67bf9f97&is=67be4e17&hm=c8f9498ea62a644ad18e6ddfd4c3f3865ad2a609271355d3a012fd28a65052b3&'
 const ohne_gif = 'https://media1.tenor.com/m/lb-o-EPqTrsAAAAC/ohnepixel-gold.gif'
 
 client.on(Events.ClientReady, readyClient => {
@@ -107,7 +108,7 @@ ${attachments ? attachments.join(' ') : ''}
         },
         {
           name: 'Your Hand',
-          value: `**${gameState.hand_1.join(' ')}**`
+          value: `**${gameState.hand.join(' ')}**`
         }
       ]);
 
@@ -116,7 +117,7 @@ ${attachments ? attachments.join(' ') : ''}
 
 
     /* check if dealt hand is a winning or losing before hitting */
-    let player_score = gameState.get_score(gameState.hand_1);
+    let player_score = gameState.get_score(gameState.hand);
     if (player_score == 21) {
       button_components.forEach((x) => x.setDisabled(true));
       embed.setImage(win_img);
@@ -148,7 +149,7 @@ ${attachments ? attachments.join(' ') : ''}
           },
           {
             name: "Your Hand",
-            value: `**${gameState.hand_1.join(' ')}**`
+            value: `**${gameState.hand.join(' ')}**`
           }
         ]);
 
@@ -159,6 +160,10 @@ ${attachments ? attachments.join(' ') : ''}
       if (gameState.score == 21 || gameState.dealer_score > 21 || (stand && gameState.score > gameState.dealer_score && gameState.score <= 21)) {
         new_embed.setImage(win_img);
         button_components.forEach((x) => x.setDisabled(true));
+      }
+
+      if (stand && gameState.score == gameState.dealer_score) {
+        new_embed.setImage(tie_img);
       }
 
       embed = new_embed;

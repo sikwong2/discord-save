@@ -23,17 +23,15 @@ function getRandomInt(min: number, max: number): number {
 
 export class GameState {
   dealer_hand: string[];
-  hand_1: string[];
-  hand_2: string[];
+  hand: string[];
   score: number;
   dealer_score: number;
 
   constructor() {
 
     this.dealer_hand = [cards[getRandomInt(0, 12)]];
-    this.hand_1 = [cards[getRandomInt(0, 12)], cards[getRandomInt(0, 12)]];
-    this.hand_2 = [];
-    this.score = this.get_score(this.hand_1);
+    this.hand = [cards[getRandomInt(0, 12)], cards[getRandomInt(0, 12)]];
+    this.score = this.get_score(this.hand);
     this.dealer_score = this.get_score(this.dealer_hand);
   }
 
@@ -53,9 +51,9 @@ export class GameState {
   }
 
   hit() {
-    this.hand_1.push(cards[getRandomInt(0, 12)]);
+    this.hand.push(cards[getRandomInt(0, 12)]);
 
-    this.score = this.get_score(this.hand_1);
+    this.score = this.get_score(this.hand);
   }
 
   stand() {
