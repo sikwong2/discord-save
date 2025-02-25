@@ -80,12 +80,6 @@ ${attachments ? attachments.join(' ') : ''}
         style: ButtonStyle.Danger,
         disabled: false,
       },
-      {
-        name: 'Split',
-        style: ButtonStyle.Primary,
-        disabled: true
-      }
-
     ]
     const button_components = buttons.map((x) => {
       return new ButtonBuilder()
