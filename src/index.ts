@@ -27,6 +27,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!Object.keys(db).includes(interaction.user.id)) {
       db[interaction.user.id] = {
         message_refs: [],
+        chips: 10000,
       }
 
       await save_db('./db.json', db);
@@ -70,6 +71,13 @@ ${attachments ? attachments.join(' ') : ''}
   }
 
   if (interaction.commandName === 'blackjack') {
+
+    const wager = interaction.options.data[0].value;
+
+    if (!Object.keys(db).includes(interaction.user.id)) return await interaction.reply('Type /init to claim your chips');
+
+    if (db[interaction.user.id]?.chips < wager) return await interaction.reply('You do not have enough chips');
+
     const buttons = [
       {
         name: 'Hit',
@@ -156,10 +164,12 @@ ${attachments ? attachments.join(' ') : ''}
       if (gameState.score > 21 || (stand && gameState.score < gameState.dealer_score && gameState.dealer_score <= 21)) {
         new_embed.setImage(lose_img);
         button_components.forEach((x) => x.setDisabled(true));
+        db[interaction.user.id].chips -= wager;
       }
       if (gameState.score == 21 || gameState.dealer_score > 21 || (stand && gameState.score > gameState.dealer_score && gameState.score <= 21)) {
         new_embed.setImage(win_img);
         button_components.forEach((x) => x.setDisabled(true));
+        db[interaction.user.id].chips += wager;
       }
 
       if (stand && gameState.score == gameState.dealer_score) {
@@ -172,6 +182,13 @@ ${attachments ? attachments.join(' ') : ''}
 
       interaction.deferUpdate();
     });
+  }
+
+  if (interaction.commandName === 'balance') {
+    if (!Object.keys(db).includes(interaction.user.id)) return await interaction.reply('Type /init');
+
+
+    await interaction.reply(`You have ${db[interaction.user.id].chips} chips`);
   }
 
 })
