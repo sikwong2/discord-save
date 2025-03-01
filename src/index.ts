@@ -15,6 +15,11 @@ client.on(Events.ClientReady, readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}`)
 });
 
+type PlayerData = {
+  message_refs: string[]
+  chips: number
+}
+
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -72,7 +77,7 @@ ${attachments ? attachments.join(' ') : ''}
 
   if (interaction.commandName === 'blackjack') {
 
-    const wager = interaction.options.data[0].value;
+    const wager: any = interaction.options.data[0].value;
 
     if (!Object.keys(db).includes(interaction.user.id)) return await interaction.reply('Type /init to claim your chips');
 
@@ -129,6 +134,8 @@ ${attachments ? attachments.join(' ') : ''}
     if (player_score == 21) {
       button_components.forEach((x) => x.setDisabled(true));
       embed.setImage(win_img);
+      db[interaction.user.id].chips += Math.ceil(wager * 1.5);
+      save_db('../db.json', db);
     }
 
 
@@ -165,11 +172,13 @@ ${attachments ? attachments.join(' ') : ''}
         new_embed.setImage(lose_img);
         button_components.forEach((x) => x.setDisabled(true));
         db[interaction.user.id].chips -= wager;
+        save_db('../db.json', db);
       }
       if (gameState.score == 21 || gameState.dealer_score > 21 || (stand && gameState.score > gameState.dealer_score && gameState.score <= 21)) {
         new_embed.setImage(win_img);
         button_components.forEach((x) => x.setDisabled(true));
         db[interaction.user.id].chips += wager;
+        save_db('../db.json', db);
       }
 
       if (stand && gameState.score == gameState.dealer_score) {
@@ -191,6 +200,21 @@ ${attachments ? attachments.join(' ') : ''}
     await interaction.reply(`You have ${db[interaction.user.id].chips} chips`);
   }
 
+  if (interaction.commandName === 'leaderboard') {
+    let db_entries = Object.entries(db);
+
+    db_entries.sort(([, a]: [string, any], [, b]: [string, any]) => b.chips - a.chips);
+
+    let leaderboard: string[] = [];
+
+    await Promise.all(db_entries.map(async (x: [string, any], index: number) => {
+      const user_d = await client.users.fetch(x[0]);
+      const entry = `${index + 1}. ${user_d.globalName} - ${x[1].chips}`;
+      leaderboard.push(entry);
+    }));
+
+    await interaction.reply(leaderboard.join('\n'));
+  }
 })
 
 client.on(Events.MessageCreate, async message => {
