@@ -37,7 +37,10 @@ client.on(Events.InteractionCreate, async interaction => {
 
       await save_db('./db.json', db);
       await interaction.reply('User successfully created');
+    } else {
+      await interaction.reply('User already in database');
     }
+
   }
 
   if (interaction.commandName === 'collection') {
